@@ -1,0 +1,5 @@
+@"
+nation1
+nation2
+nation3
+"@ | Out-File -Encoding UTF8 targets.txt

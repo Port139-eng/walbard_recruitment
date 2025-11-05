@@ -1,0 +1,4 @@
+@"
+# Test recruitment telegram
+east tumandelstopia
+"@ | Out-File -Encoding UTF8 targets.txt

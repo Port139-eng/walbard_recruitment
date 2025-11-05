@@ -1,0 +1,96 @@
+"""
+Rate Limiting Guide for NationStates Recruitment Autopilot
+"""
+
+print("""
+╔════════════════════════════════════════════════════════════════════════════╗
+║         NATIONSTATES RATE LIMITING - TELEGRAM DELAY SETTINGS              ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+YOUR CODE IS NOW DEFAULT: NS_DELAY=120 (2 minutes between sends)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+SAFE DELAY OPTIONS (All respect NationStates API):
+
+┌────────────────────────────────────────────────────────────────────────┐
+│ 60 SECONDS (FASTEST) - ⚡⚡⚡                                            │
+├────────────────────────────────────────────────────────────────────────┤
+│ • 1 nation per minute                                                  │
+│ • 50 nations in ~50 minutes                                            │
+│ • Very respectful - well below rate limits                             │
+│ • Best for: Time-sensitive recruitment                                 │
+│ • Set: NS_DELAY=60                                                     │
+└────────────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────────────┐
+│ 120 SECONDS (RECOMMENDED DEFAULT) - 👍                                 │
+├────────────────────────────────────────────────────────────────────────┤
+│ • 1 nation per 2 minutes                                               │
+│ • 50 nations in ~100 minutes (~1.5 hours)                              │
+│ • Balanced speed and safety                                            │
+│ • Good for: General recruitment                                        │
+│ • Set: NS_DELAY=120  (or omit - this is default)                       │
+└────────────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────────────┐
+│ 180 SECONDS (CONSERVATIVE) - 🛡️                                        │
+├────────────────────────────────────────────────────────────────────────┤
+│ • 1 nation per 3 minutes                                               │
+│ • 50 nations in ~150 minutes (~2.5 hours)                              │
+│ • Extra safe - maximum safety margin                                   │
+│ • Best for: If you want maximum safety                                 │
+│ • Set: NS_DELAY=180                                                    │
+└────────────────────────────────────────────────────────────────────────┘
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+WHY THESE DELAYS ARE SAFE:
+
+NationStates Official Requirements:
+  • Minimum: 1 request per 600ms (0.6 seconds)
+  • Recommended for automation: 1+ second between requests
+  • Your telegrams: Individual API requests
+
+Your settings:
+  • 60 seconds = MASSIVELY above minimum (100x buffer)
+  • 120 seconds = Even more conservative
+  • 180 seconds = Maximum safety
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+HOW TO CHANGE ON RAILWAY:
+
+1. Go to your Railway project dashboard
+2. Click "Variables"
+3. Add/Edit: NS_DELAY = 60  (or 120, 180, etc)
+4. Deploy
+5. Done! Will take effect on next restart
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+EXAMPLE DEPLOYMENTS:
+
+SPEED FOCUSED (recruiting ASAP):
+  NS_DELAY=60
+  NS_DISCOVER_SLEEP=30
+  → Sends 50 nations in ~50 minutes, checks for new ones every 30s
+
+BALANCED (DEFAULT):
+  NS_DELAY=120
+  NS_DISCOVER_SLEEP=60
+  → Sends 50 nations in ~100 minutes, checks every 60s
+
+SAFE & CONSERVATIVE:
+  NS_DELAY=180
+  NS_DISCOVER_SLEEP=60
+  → Sends 50 nations in ~150 minutes, checks every 60s
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+YOUR CURRENT SETTING: NS_DELAY=120 (2 minutes)
+✓ This is recommended and respectful
+✓ Fast enough for most use cases
+✓ Safe for continuous 24/7 operation
+
+""")

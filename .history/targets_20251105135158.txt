@@ -1,0 +1,4 @@
+# Target nations for recruitment
+nation_alpha
+nation_beta
+nation_gamma

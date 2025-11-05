@@ -1,0 +1,4 @@
+# Target nations for recruitment telegrams
+nation_alpha
+nation_beta
+nation_gamma
