@@ -1,6 +1,9 @@
+import json
 import os
+import tempfile
 import unittest
-from unittest.mock import MagicMock, patch
+from datetime import datetime, timezone
+from unittest.mock import patch
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -126,6 +129,56 @@ class TestRecruitment(unittest.TestCase):
         with patch("recruitment.os.path.exists", return_value=False):
             targets = recruitment.load_targets()
             self.assertEqual(targets, [])
+
+    def test_normalize_region_name(self):
+        self.assertEqual(recruitment.normalize_region_name(" New United Kingdom "), "new_united_kingdom")
+        self.assertEqual(recruitment.normalize_region_name(None), "")
+
+    def test_load_region_campaigns_active(self):
+        payload = {
+            "campaigns": [
+                {
+                    "tag": "britannia_push",
+                    "regions": ["Britannia", "New United Kingdom"],
+                    "starts_at": "2025-11-22T00:00:00Z",
+                    "ends_at": "2025-11-30T23:59:59Z",
+                }
+            ]
+        }
+        tmp = tempfile.NamedTemporaryFile("w", delete=False)
+        try:
+            tmp.write(json.dumps(payload))
+            tmp.flush()
+            tmp.close()
+            with patch("recruitment.REGION_CAMPAIGNS_FILE", tmp.name):
+                campaigns = recruitment.load_region_campaigns(now=datetime(2025, 11, 25, tzinfo=timezone.utc))
+        finally:
+            os.remove(tmp.name)
+
+        self.assertEqual(campaigns.get("britannia"), "britannia_push")
+        self.assertEqual(campaigns.get("new_united_kingdom"), "britannia_push")
+
+    def test_load_region_campaigns_expired(self):
+        payload = {
+            "campaigns": [
+                {
+                    "tag": "old_campaign",
+                    "regions": ["Kingdom of Britannia"],
+                    "ends_at": "2025-11-01T00:00:00Z",
+                }
+            ]
+        }
+        tmp = tempfile.NamedTemporaryFile("w", delete=False)
+        try:
+            tmp.write(json.dumps(payload))
+            tmp.flush()
+            tmp.close()
+            with patch("recruitment.REGION_CAMPAIGNS_FILE", tmp.name):
+                campaigns = recruitment.load_region_campaigns(now=datetime(2025, 11, 25, tzinfo=timezone.utc))
+        finally:
+            os.remove(tmp.name)
+
+        self.assertEqual(campaigns, {})
 
 
 if __name__ == "__main__":

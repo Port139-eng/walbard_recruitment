@@ -5,7 +5,8 @@ import json
 import logging
 import os
 import time
-from typing import List, Optional, Set
+from datetime import datetime, timezone
+from typing import Dict, List, Optional, Set
 from xml.etree import ElementTree as ET
 
 import requests
@@ -24,6 +25,7 @@ POLL_SLEEP = int(os.getenv("NS_POLL_SLEEP", "60"))
 DISCOVER_SLEEP = int(os.getenv("NS_DISCOVER_SLEEP", "60"))  # Poll for new nations every 60s
 STATE_FILE = "sent_nations.json"
 DISCOVERED_FILE = "discovered_nations.json"
+REGION_CAMPAIGNS_FILE = os.getenv("NS_REGION_CAMPAIGNS_FILE", "region_targets.json")
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
@@ -74,6 +76,71 @@ def load_targets() -> List[str]:
         return [line.strip() for line in fh if line.strip() and not line.startswith("#")]
 
 
+def normalize_region_name(name: Optional[str]) -> str:
+    if not name:
+        return ""
+    return "_".join(name.strip().lower().split())
+
+
+def parse_timestamp(raw_value: Optional[str]) -> Optional[datetime]:
+    if not raw_value:
+        return None
+    value = raw_value.strip()
+    if not value:
+        return None
+    if value.endswith("Z"):
+        value = value[:-1] + "+00:00"
+    try:
+        dt = datetime.fromisoformat(value)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(timezone.utc)
+    except ValueError:
+        logging.warning("Invalid timestamp '%s' in %s", raw_value, REGION_CAMPAIGNS_FILE)
+        return None
+
+
+def load_region_campaigns(now: Optional[datetime] = None) -> Dict[str, str]:
+    """Return mapping of normalized region name -> campaign tag for active campaigns."""
+    if not os.path.exists(REGION_CAMPAIGNS_FILE):
+        return {}
+
+    try:
+        with open(REGION_CAMPAIGNS_FILE, "r", encoding="utf-8") as fh:
+            payload = json.load(fh)
+    except (json.JSONDecodeError, IOError) as exc:
+        logging.warning("Failed to load region campaigns from %s: %s", REGION_CAMPAIGNS_FILE, exc)
+        return {}
+
+    campaigns = payload.get("campaigns", []) if isinstance(payload, dict) else []
+    now_ts = now or datetime.now(timezone.utc)
+    region_map: Dict[str, str] = {}
+
+    for campaign in campaigns:
+        if not isinstance(campaign, dict):
+            continue
+        tag = campaign.get("tag") or "campaign"
+        starts_at = parse_timestamp(campaign.get("starts_at"))
+        ends_at = parse_timestamp(campaign.get("ends_at"))
+
+        if starts_at and now_ts < starts_at:
+            continue
+        if ends_at and now_ts > ends_at:
+            continue
+
+        regions = campaign.get("regions", [])
+        if not isinstance(regions, list):
+            continue
+        for region in regions:
+            normalized = normalize_region_name(region)
+            if normalized:
+                region_map[normalized] = tag
+
+    if region_map:
+        logging.info("Loaded %d active region targets", len(region_map))
+    return region_map
+
+
 def discover_new_nations(session: requests.Session) -> List[str]:
     """Fetch newly founded nations from NationStates API."""
     try:
@@ -102,6 +169,25 @@ def discover_new_nations(session: requests.Session) -> List[str]:
     except ET.ParseError as exc:
         logging.error("Failed to parse API response: %s", exc)
         return []
+
+
+def fetch_nation_region(session: requests.Session, nation: str) -> Optional[str]:
+    params = {"nation": nation.replace(" ", "_"), "q": "region"}
+    headers = {"User-Agent": USER_AGENT}
+    try:
+        resp = session.get(API_URL, params=params, headers=headers, timeout=30)
+        resp.raise_for_status()
+        root = ET.fromstring(resp.content)
+        region_elem = root.find("REGION")
+        if region_elem is not None and region_elem.text:
+            return region_elem.text.strip()
+        return None
+    except requests.RequestException as exc:
+        logging.warning("Failed to fetch region for %s: %s", nation, exc)
+        return None
+    except ET.ParseError as exc:
+        logging.warning("Failed to parse region response for %s: %s", nation, exc)
+        return None
 
 
 def load_discovered_nations() -> Set[str]:
@@ -152,12 +238,15 @@ def main_loop() -> None:
     session = make_session()
     sent_nations = load_sent_nations()
     discovered_nations = load_discovered_nations()
+    nation_region_cache: Dict[str, Optional[str]] = {}
 
     logging.info("Autopilot started. Loaded %d sent nations, %d discovered nations. Press Ctrl+C to stop.", 
                  len(sent_nations), len(discovered_nations))
 
     try:
         while True:
+            region_targets = load_region_campaigns()
+
             # Discover newly founded nations
             new_nations = discover_new_nations(session)
             
@@ -172,13 +261,29 @@ def main_loop() -> None:
                     
                     # Send to each new nation
                     for nation in undiscovered:
+                        campaign_tag = None
+                        if region_targets:
+                            region_name = nation_region_cache.get(nation)
+                            if region_name is None:
+                                region_name = fetch_nation_region(session, nation)
+                                nation_region_cache[nation] = region_name
+                            normalized_region = normalize_region_name(region_name)
+                            campaign_tag = region_targets.get(normalized_region)
+                            if not campaign_tag:
+                                logging.info("Skipping %s; region '%s' not in active campaign", nation, region_name or "unknown")
+                                continue
+                            logging.info("Targeting %s under campaign '%s' (region: %s)", nation, campaign_tag, region_name)
+
                         if nation not in sent_nations:
                             logging.info("Sending TG to newly founded nation: %s", nation)
                             resp = send_tg(session, nation)
                             if resp and getattr(resp, "status_code", None) and 200 <= resp.status_code < 300:
                                 sent_nations.add(nation)
                                 save_sent_nations(sent_nations)
-                                logging.info("Successfully sent TG to %s", nation)
+                                if campaign_tag:
+                                    logging.info("Successfully sent TG to %s [campaign=%s]", nation, campaign_tag)
+                                else:
+                                    logging.info("Successfully sent TG to %s", nation)
                             else:
                                 logging.warning("Failed to send TG to %s", nation)
                             
