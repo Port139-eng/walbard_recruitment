@@ -44,6 +44,7 @@ sent_nations.json
 discovered_nations.json
 targets.txt
 *.log
+verify_no_region_filtering.py
 
 # History
 .history/
