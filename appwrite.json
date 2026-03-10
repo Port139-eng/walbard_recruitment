@@ -1,0 +1,20 @@
+{
+  "projectId": "YOUR_PROJECT_ID",
+  "projectName": "walbard-recruitment",
+  "functions": [
+    {
+      "$id": "recruitment-bot",
+      "name": "NationStates Recruitment Bot",
+      "runtime": "python-3.11",
+      "execute": [],
+      "events": [],
+      "schedule": "*/2 * * * *",
+      "timeout": 300,
+      "enabled": true,
+      "logging": true,
+      "entrypoint": "main.py",
+      "commands": "pip install -r requirements.txt",
+      "path": "."
+    }
+  ]
+}
