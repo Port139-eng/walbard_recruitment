@@ -20,9 +20,22 @@ SECRET_KEY = os.getenv("NS_SECRET_KEY")
 USER_AGENT = os.getenv("NS_USER_AGENT", "WalbardRecruitBot")
 
 API_URL = "https://www.nationstates.net/cgi-bin/api.cgi"
-DELAY = int(os.getenv("NS_DELAY", "120"))
-POLL_SLEEP = int(os.getenv("NS_POLL_SLEEP", "60"))
-DISCOVER_SLEEP = int(os.getenv("NS_DISCOVER_SLEEP", "60"))  # Poll for new nations every 60s
+
+
+def _env_int(name: str, default: int) -> int:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        logging.warning("Invalid %s value '%s'; using default %d", name, raw, default)
+        return default
+
+
+DELAY = _env_int("NS_DELAY", 120)
+POLL_SLEEP = _env_int("NS_POLL_SLEEP", 60)
+DISCOVER_SLEEP = _env_int("NS_DISCOVER_SLEEP", 60)  # Poll for new nations every 60s
 STATE_FILE = "sent_nations.json"
 DISCOVERED_FILE = "discovered_nations.json"
 REGION_CAMPAIGNS_FILE = os.getenv("NS_REGION_CAMPAIGNS_FILE", "region_targets.json")
