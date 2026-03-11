@@ -130,6 +130,20 @@ class TestRecruitment(unittest.TestCase):
             targets = recruitment.load_targets()
             self.assertEqual(targets, [])
 
+    def test_invalid_numeric_env_vars_fall_back_to_defaults(self):
+        """Test invalid numeric env vars do not crash module import."""
+        with patch.dict(
+            os.environ,
+            {"NS_DELAY": "abc", "NS_POLL_SLEEP": "", "NS_DISCOVER_SLEEP": "60s"},
+            clear=False,
+        ):
+            import importlib
+
+            importlib.reload(recruitment)
+            self.assertEqual(recruitment.DELAY, 120)
+            self.assertEqual(recruitment.POLL_SLEEP, 60)
+            self.assertEqual(recruitment.DISCOVER_SLEEP, 60)
+
     def test_normalize_region_name(self):
         self.assertEqual(recruitment.normalize_region_name(" New United Kingdom "), "new_united_kingdom")
         self.assertEqual(recruitment.normalize_region_name(None), "")
