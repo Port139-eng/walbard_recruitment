@@ -13,7 +13,7 @@
       "enabled": true,
       "logging": true,
       "entrypoint": "main.py",
-      "commands": "pip install -r requirements.txt",
+      "commands": "pip install --no-cache-dir -r requirements.txt",
       "path": "."
     }
   ]
