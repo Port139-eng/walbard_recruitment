@@ -83,6 +83,16 @@ python test_send.py
 
 The repository ships an `appwrite.json` that the [Appwrite CLI](https://appwrite.io/docs/tooling/command-line/installation) uses to create and deploy the function.
 
+### Quick deploy (copy/paste)
+
+```bash
+npm install -g appwrite-cli
+appwrite client --endpoint https://cloud.appwrite.io/v1
+appwrite login
+# set your Appwrite project id in appwrite.json (replace YOUR_PROJECT_ID)
+appwrite deploy function
+```
+
 ### How it works on Appwrite
 
 Because Appwrite Functions are short-lived, the infinite loop from `recruitment.py` is replaced by `main.py` — a single-execution entry point.  A **cron schedule of every 2 minutes** (`*/2 * * * *`, set in `appwrite.json`) calls the function repeatedly, mirroring the original 120-second delay between sends:
@@ -103,6 +113,7 @@ npm install -g appwrite-cli
 ### Step 2 — Log in and initialise
 
 ```bash
+appwrite client --endpoint https://cloud.appwrite.io/v1
 appwrite login
 ```
 
@@ -238,6 +249,3 @@ How often to check for newly founded nations:
 - **"Failed to discover new nations"**: Check User-Agent and API connectivity
 - **No telegrams sending**: Verify recruitment telegrams are enabled in your nation's preferences
 - **Rate limiting**: Increase NS_DELAY or NS_DISCOVER_SLEEP
-#   w a l b a r d _ r e c r u i t m e n t 
- 
- 
